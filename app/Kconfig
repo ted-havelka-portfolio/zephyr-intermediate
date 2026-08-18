@@ -1,1 +1,7 @@
 source "Kconfig.zephyr"
+
+config COOPERATIVE_THREAD
+  bool "Enable a cooperative thread in basic thread demo app."
+  default y
+  help
+	"Enable a cooperative thread in basic thread demo app."
