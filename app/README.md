@@ -29,12 +29,11 @@ dev boards the script is called this way:
 At time of writing, Zephyr 4.4.1 flash runner scripts don't support the use of
 pyocd with the STMicro dev boards mentioned in the "Hardware Tested" section.
 The west tool seems to prefer an stm32CubeProgrammer utility which is not
-installed in the Zephyr tools and SDK set up processor, so that flash utility
-is also not available, at least not through a direct invocation of west.
+installed with the Zephyr tools nor its SDK.
 
-To overcome this, a helper shell script is added along with an Open OCD
-configuration file, to support the use of the open source pyocd flashing
-utility.   The config file is named oocd.cfg.  Its contents are:
+To assist with flashing STMicro dev boards, a helper shell script is added to
+this project.  A configuration file is also added.  This file, named oocd.cfg
+contains:
 
 _Pyocd config helper file_
 
@@ -54,9 +53,20 @@ part of the Zephyr 4.4.1 set up process.
 
 ## Questions and Answers
 
-Q - Which thread executes the most often?
+Question:  Which thread executes the most often?
 
-Q - Does priority affect interleaving of threads?
+Answer:  Among the preemptive threads, the thread which runs the most often is
+generally the thread with the shortest sleep time.
+
+When a cooperative thread is added, and its "while one" loop construct calls
+k_yield() rather than k_msleep(), no other threads execute.  In fact, Zephyr's
+banner message does not even appear.  
+
+Question: Does priority affect interleaving of threads?
+
+Answer:  Thread priorities affect thread interleaving.  The highest priority
+thread is the first to run, when a lower priority thread sleeps or becomes
+suspended.
 
 ## Typical Output
 
@@ -140,4 +150,62 @@ With the cooperative thread in play, output looks like:
 [00:00:01.401,000] <inf> demo: thread   c
 [00:00:01.501,000] <inf> demo: thread a
 [00:00:01.501,000] <inf> demo: thread   c
+```
+
+The cooperative thread is performing busy work for five loop iternations.
+This busy work becomes more visible with an added logging statement.  While the
+assignment calls for the cooperative thread to yield between busy work
+executions, it's not clear whether "to yield" is meant in the strict sense,
+that is, the thread must called ``k_yield()``, or whether this requirement
+means the thread must in one way or another yield to other threads.  Taking the
+less strict interpretation, and calling a kernel sleep API after busy work,
+gives an output like:
+
+```
+*** Booting Zephyr OS build v4.4.0 ***
+[00:00:00.000,000] <inf> demo: thread    d - cooperative
+[00:00:00.000,000] <inf> demo: thread    d - busy
+[00:00:00.000,000] <inf> demo: thread    d - busy
+[00:00:00.000,000] <inf> demo: thread    d - busy
+[00:00:00.000,000] <inf> demo: thread    d - busy
+[00:00:00.001,000] <inf> demo: thread    d - busy
+[00:00:00.001,000] <inf> demo: main.c thread test starting
+[00:00:00.001,000] <inf> demo: thread   c
+[00:00:00.001,000] <inf> demo: thread  b
+[00:00:00.001,000] <inf> demo: thread a
+[00:00:00.101,000] <inf> demo: thread   c
+[00:00:00.201,000] <inf> demo: thread  b
+[00:00:00.201,000] <inf> demo: thread   c
+[00:00:00.301,000] <inf> demo: thread a
+[00:00:00.301,000] <inf> demo: thread   c
+[00:00:00.401,000] <inf> demo: thread  b
+[00:00:00.401,000] <inf> demo: thread   c
+[00:00:00.501,000] <inf> demo: thread   c
+[00:00:00.601,000] <inf> demo: thread a
+[00:00:00.601,000] <inf> demo: thread  b
+[00:00:00.601,000] <inf> demo: thread   c
+[00:00:00.702,000] <inf> demo: thread   c
+[00:00:00.801,000] <inf> demo: thread  b
+[00:00:00.802,000] <inf> demo: thread   c
+[00:00:00.901,000] <inf> demo: thread a
+[00:00:00.902,000] <inf> demo: thread   c
+[00:00:01.001,000] <inf> demo: thread    d - cooperative
+[00:00:01.001,000] <inf> demo: thread    d - busy
+[00:00:01.001,000] <inf> demo: thread    d - busy
+[00:00:01.001,000] <inf> demo: thread    d - busy
+[00:00:01.002,000] <inf> demo: thread    d - busy
+[00:00:01.002,000] <inf> demo: thread    d - busy
+[00:00:01.002,000] <inf> demo: thread   c
+[00:00:01.002,000] <inf> demo: thread  b
+[00:00:01.102,000] <inf> demo: thread   c
+[00:00:01.201,000] <inf> demo: thread a
+[00:00:01.202,000] <inf> demo: thread   c
+[00:00:01.202,000] <inf> demo: thread  b
+[00:00:01.302,000] <inf> demo: thread   c
+[00:00:01.402,000] <inf> demo: thread  b
+[00:00:01.402,000] <inf> demo: thread   c
+[00:00:01.501,000] <inf> demo: thread a
+[00:00:01.503,000] <inf> demo: thread   c
+[00:00:01.602,000] <inf> demo: thread  b
+[00:00:01.603,000] <inf> demo: thread   c
 ```
