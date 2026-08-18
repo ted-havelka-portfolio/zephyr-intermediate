@@ -17,6 +17,8 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_DBG);
 #define T_C_SLEEP_MS 100
 #define T_D_SLEEP_MS 1000
 
+#define CO_OP_BUSY_ITERS 5
+
 void t_low_fn(void *p1, void *p2, void *p3)
 {
 	while (1) {
@@ -46,7 +48,13 @@ void t_coop_fn(void *p1, void *p2, void *p3)
 {
 	while (1) {
 		LOG_INF("thread    d - cooperative");
+		for (int i = 0; i < CO_OP_BUSY_ITERS; i++) {
+			k_busy_wait(200);
+			LOG_INF("thread    d - busy");
+		}
 		k_msleep(T_D_SLEEP_MS);
+		// k_yield();  /* <-- nothing, not even Zephyr banner message */
+		               /*     appear with call to k_yield() active.   */
 	}
 }
 #endif
