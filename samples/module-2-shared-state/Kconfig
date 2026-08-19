@@ -1,0 +1,7 @@
+source "Kconfig.zephyr"
+
+config MUTEX_FOR_SHARED_COUNT
+  bool "Enable mutual exclusion protection on shared count variable"
+  default y
+  help
+	"Enable mutual exclusion protection on shared count variable"
