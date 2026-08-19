@@ -1,9 +1,16 @@
-Iomico Zephyr Intermediate Course - 2026 Q3
+# Iomico Zephyr Intermediate Course - 2026 Q3
 
 Assignment 1:  Kernel and Scheduling
 
 ## The Work
 
+The tiny application this readme goes with, is an exercise of Zephyr threads.
+Three pre-emptive (pre-emtable) threads are started at the beginning of the app
+and a forth cooperative thread is also started.  Output messages over UART,
+using Zephyr's logging system, show the scheduling behavior for the threads.
+
+A custom Kconfig symbol allows for turning the cooperative thread on and off
+at compile time.
 
 ## Hardware Tested
 
