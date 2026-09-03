@@ -1,0 +1,8 @@
+source "Kconfig.zephyr"
+
+config DEBOUNCE_HANDLING
+  bool "Enable kernel work rescheduling for debounce"
+  default y
+  help
+	  "Enable kernel work rescheduling to show one way to debounce an event
+	  with button press like behavior."

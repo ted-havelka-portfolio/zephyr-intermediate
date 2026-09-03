@@ -42,6 +42,8 @@ There are four tasks in total.  The final task is a bonus task.
 
 The inefficient, thread based polling is shown by the output messages:
 
+_Excerpt: Polling Based Event Handling_
+
 ```
 *** Booting Zephyr OS build v4.4.0 ***
 [00:00:00.000,000] <inf> homework: === L3 Homework: Polling to Workqueue ===
@@ -80,6 +82,8 @@ The inefficient, thread based polling is shown by the output messages:
 
 To replace the polling thread with a kernel work handler . . .
 
+_Excerpt: Polling Replaced with Scheduled Work Item_
+
 ```
 *** Booting Zephyr OS build v4.4.0 ***
 [00:00:00.000,000] <inf> homework: === L3 Homework: Polling to Workqueue ===
@@ -106,4 +110,30 @@ To replace the polling thread with a kernel work handler . . .
 [00:00:01.002,000] <inf> homework: [SENSOR] event 9  tick=1002
 [00:00:01.002,000] <inf> homework: [CONSUMER] processed event 10  wakeups_so_far=0  tick=1002
 [00:00:01.002,000] <inf> homework: [SENSOR] all events produced
+```
+
+## Rescheduling of Work to Debounce
+
+Output with the call to submit work amended to be a call to schedule, then
+reschedule work.  Rescheduling happens a little more often, a little sooner than
+the simulated sensor events.  As a consequence only the final work submission
+executes.
+
+A Kconfig symbol is added to support work rescheduling, and at the same time
+to retain the previous code of lecture 3, task 3.
+
+_Excerpt: Rescheduling Work and Debounced "Event" Output_
+
+```
+*** Booting Zephyr OS build v4.4.0 ***
+[00:00:00.000,000] <inf> homework: === L3 Homework: Polling to Workqueue ===
+[00:00:00.000,000] <inf> homework: Starter: polling disabled, simulated sensor fires every 20ms
+[00:00:00.000,000] <inf> homework: Expecting no wasted wakeups per event
+[00:00:00.020,000] <inf> homework: [SENSOR] event 0  tick=20
+[00:00:00.040,000] <inf> homework: [SENSOR] event 1  tick=40
+[00:00:00.060,000] <inf> homework: [SENSOR] event 2  tick=60
+[00:00:00.080,000] <inf> homework: [SENSOR] event 3  tick=80
+[00:00:00.100,000] <inf> homework: [SENSOR] event 4  tick=100
+[00:00:00.100,000] <inf> homework: [SENSOR] done, all events produced
+[00:00:00.130,000] <inf> homework: [CONSUMER] processed event 1  wakeups_so_far=0  tick=130
 ```

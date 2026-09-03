@@ -53,6 +53,13 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 #define POLL_MS	     10	/* polling consumer checks every 10ms */
 #define EVENT_COUNT  10	/* total sensor events to produce */
 
+#if CONFIG_DEBOUNCE_HANDLING
+#warning "Building work rescheduling code to provide debounce feature"
+#define EVENT_COUNT_TO_DEBOUNCE    5
+#define SIMULATED_BOUNCE_EVENT_MS 20
+#define SENSOR_WORK_DELAY_MS      30
+#endif
+
 /* ================================================================
  * STARTER CODE -- inefficient polling version
  * Run this first, then replace with workqueue in Task 2.
@@ -75,37 +82,45 @@ void sensor_handler(struct k_work *work)
 			total_processed, total_wakeups, k_uptime_get_32());
 }
 
+#if CONFIG_DEBOUNCE_HANDLING
+K_WORK_DELAYABLE_DEFINE(sensor_work, sensor_handler);
+#else
 K_WORK_DEFINE(sensor_work, sensor_handler);
+#endif
 
 static void sensor_sim_fn(void *p1, void *p2, void *p3)
 {
+#if CONFIG_DEBOUNCE_HANDLING
+	int ret = k_work_schedule(&sensor_work, K_MSEC(SENSOR_WORK_DELAY_MS));
+	if (ret < 0) {
+		LOG_ERR("Failed to schedule simulated sensor work, err %d", ret);
+		return;
+	}
+#endif
+
+#if CONFIG_DEBOUNCE_HANDLING
+	for (int i = 0; i < EVENT_COUNT_TO_DEBOUNCE; i++) {
+		k_msleep(SIMULATED_BOUNCE_EVENT_MS);				
+#else
 	for (int i = 0; i < EVENT_COUNT; i++) {
 		k_msleep(SENSOR_MS);
+#endif
 
 		total_events++;
 		LOG_INF("[SENSOR] event %d  tick=%u", i, k_uptime_get_32());
 
+#if CONFIG_DEBOUNCE_HANDLING
+                int ret = k_work_reschedule(&sensor_work, K_MSEC(SENSOR_WORK_DELAY_MS));		
+#else
 		int ret = k_work_submit(&sensor_work);
+#endif
 		if (ret < 0) {
 			LOG_ERR("submit failed, err %d", ret);
 	   	}
-
-		/*
-		 * BONUS: Replace the single k_msleep(SENSOR_MS) above with
-		 * a burst of 5 rapid events, then use k_work_reschedule in
-		 * the handler to collapse them to one execution.
-		 */
 	}
 
-	LOG_INF("[SENSOR] all events produced");
+	LOG_INF("[SENSOR] done, all events produced");
 }
-
-/* ------------------------------------------------------------------ */
-/*  Threads                                                           */
-/*                                                                    */
-/*  TASK 2: Remove the polling_thread define. Add a K_WORK_DEFINE     */
-/*  for your handler here instead.                                    */
-/* ------------------------------------------------------------------ */
 
 K_THREAD_DEFINE(sensor_thread,  STACK_SIZE, sensor_sim_fn, NULL, NULL, NULL, 5, 0, 0);
 
@@ -134,7 +149,11 @@ int main(void)
 {
 	LOG_INF("=== L3 Homework: Polling to Workqueue ===");
 	LOG_INF("Starter: polling disabled, simulated sensor fires every %dms",
+#if CONFIG_DEBOUNCE_HANDLING
+			SIMULATED_BOUNCE_EVENT_MS);
+#else
 			SENSOR_MS);
+#endif
 	LOG_INF("Expecting no wasted wakeups per event");
 
 	/* Wait long enough for all events to complete */
