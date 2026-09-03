@@ -1,0 +1,18 @@
+/**
+ * @brief DTS overlay for l1-task1, Iomico Zephyr Intermediate Course
+ *
+ * @note For STMicro's nucleo_l432, override Zephyr's chosen console UART with
+ *  the UART which is broken out to pins of the dev board.  Also make sure this
+ *  UART device is enabled.
+ */
+
+/ {
+	chosen {
+		zephyr,console = &usart1;
+		zephyr,shell-uart = &usart1;
+	};
+};
+
+&usart1 {
+	status = "okay";
+};
