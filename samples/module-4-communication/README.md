@@ -25,6 +25,12 @@ using a shell convenience script:
 ../../app/flash-manually.sh w --config-path ../../app/scripts
 ```
 
+Or alternately (this simpler and better invocation worked on 2026-09-20):
+
+```
+west flash -r openocd
+```
+
 ## To Observe Output
 
 When targeting an STM nucleo_ type dev board:
