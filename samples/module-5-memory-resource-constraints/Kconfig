@@ -1,0 +1,19 @@
+# For Iomico Zephyr Intermediate course, homework 5 task 1
+# (tag l5-task1)
+
+config SUBSCRIBER_QUEUE_SIZE
+	int "Size of a demonstration subscriber message queue"
+	range 1 128
+	default 5
+	help
+	  Set the size of a message subscriber queue.  Message is arbitrary data
+	  not limited to printable characters.
+
+config SUBSCRIBER_SIMULATED_WORK_DELAY_MS
+	int "Delay added at end of l5-task1 subscriber thread, in milliseconds"
+	default 100
+	help
+	  Delay added at end of l5-task1 subscriber thread, in milliseconds,
+	  to simulate long running work.
+
+source "Kconfig.zephyr"
