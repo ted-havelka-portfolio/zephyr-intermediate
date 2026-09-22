@@ -62,6 +62,14 @@ static struct task_timeout_context task_ctx = {
 	.api_name = "l5-logging-fn",
 };
 
+K_SEM_DEFINE(l5t1_work_done, 0, 3);
+
+// Provide a little more granularity for app to see when health thread done:
+K_SEM_DEFINE(producer_done, 0, 1);
+K_SEM_DEFINE(consumer_done, 0, 1);
+K_SEM_DEFINE(p_and_c_work_done, 0, 1);
+K_SEM_DEFINE(health_monitor_done, 0, 1);
+
 //----------------------------------------------------------------------
 // - SECTION - routines
 //----------------------------------------------------------------------
@@ -118,9 +126,9 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 		k_msleep(SENSOR_PERIOD_MS);
 	}
 
-	LOG_INF("******************");
 	LOG_INF("* [SENSOR] done  *");
-	LOG_INF("******************");
+
+	k_sem_give(&producer_done);
 }
 
 // For l5-task1, we are going to treat this logging thread as the consumer.
@@ -151,17 +159,17 @@ static void logging_thread_fn(void *p1, void *p2, void *p3)
 
 		rc = zbus_sub_wait(&l5_subscriber, &chan, K_MSEC(10000));
 		if (rc < 0) {
-			LOG_ERR("Failed or timed out waiting for zbus channel %d", (uint32_t)chan);
+			LOG_ERR("[LOGGING] Failed or timed out waiting for zbus channel %d", (uint32_t)chan);
 		}
 
 		rc = zbus_chan_read(chan, &msg, K_NO_WAIT);
 		if (rc < 0) {
-			LOG_ERR("Failed M3 . . .");
+			LOG_ERR("[LOGGING] Failed to read zbus channel for sensor reading");
 		}
 
 		received++;
 
-		LOG_INF("[LOGGER-MSG] thread=%s seq=%u x=%d y=%d z=%d latency=%ums",
+		LOG_INF("[LOGGING] thread=%s seq=%u x=%d y=%d z=%d latency=%ums",
 			k_thread_name_get(k_current_get()),
 			msg.seq,
 			msg.x, msg.y, msg.z,
@@ -176,33 +184,43 @@ static void logging_thread_fn(void *p1, void *p2, void *p3)
 
 		// LOG_INF("Feeding task watchdog timer . . .");
 		task_wdt_feed(task_wdt_id);
-
-#if 0
-		// REFERENCE https://docs.zephyrproject.org/latest/services/zbus/index.html
-		uint32_t count = k_msgq_num_used_get(l5_subscriber.queue);
-		LOG_INF("- M1 - hw5 subscriber queue holds %d of %d messages",
-			count, CONFIG_SUBSCRIBER_QUEUE_SIZE);
-#endif
 	}
 
-	LOG_INF("[LOGGER-MSG] done received=%d", received);
+	LOG_INF("[LOGGING] done, received=%d messages", received);
+	k_sem_give(&consumer_done);
 }
 
 static void health_thread_fn(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
-	// int32_t rc = 0;
+	int32_t rc = 0;
 
 	k_thread_name_set(k_current_get(), "health-thread");
 
 	while (1) {
 		// REFERENCE https://docs.zephyrproject.org/latest/services/zbus/index.html
 		uint32_t count = k_msgq_num_used_get(l5_subscriber.queue);
+#if 0
 		LOG_INF("- M1 - hw5 subscriber queue holds %d of %d messages",
 			count, CONFIG_SUBSCRIBER_QUEUE_SIZE);
+#endif
+		// Log warning at 75% queue capacity
+		if ((((count * 1000) / CONFIG_SUBSCRIBER_QUEUE_SIZE) / 10) >=
+			CONFIG_L5T1_QUEUE_WATERMARK) {
+			LOG_WRN("Queue at or over capacity of %d%%",
+					CONFIG_L5T1_QUEUE_WATERMARK);
+		}
+
+		rc = k_sem_take(&p_and_c_work_done, K_NO_WAIT);
+		if (rc == 0) {
+			break;
+		}
 
 		k_msleep(1000);
 	}
+
+	LOG_INF("[HEALTH] Done.");
+	k_sem_give(&health_monitor_done);
 }
 
 //----------------------------------------------------------------------
@@ -232,5 +250,16 @@ int main(void)
 
 	task_wdt_init(NULL);
 
+	k_sem_take(&producer_done, K_FOREVER);
+	LOG_INF("[MAIN] Producer thread done.");
+	k_sem_take(&consumer_done, K_FOREVER);
+	LOG_INF("[MAIN] Consumer thread done.");
+
+	k_sem_give(&p_and_c_work_done);
+	k_sem_take(&health_monitor_done, K_FOREVER);
+	LOG_INF("[MAIN] Health thread done.");
+
+	LOG_INF("[MAIN] Producer, consumer and health monitor all completed their work.");
+	LOG_INF("[MAIN] App l5-task1 done.");
 	return 0;
 }

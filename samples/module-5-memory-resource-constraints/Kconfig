@@ -35,4 +35,11 @@ config SUBSCRIBER_SIMULATED_WORK_DELAY_MS
 	  Delay added at end of l5-task1 subscriber thread, in milliseconds,
 	  to simulate long running work.
 
+config L5T1_QUEUE_WATERMARK
+	int "Percent use of message queue, at which to warn at run time"
+	default 75
+	range 1 100
+	help
+	  Percent use of message queue at which to warn at run time, if reached.
+
 source "Kconfig.zephyr"
