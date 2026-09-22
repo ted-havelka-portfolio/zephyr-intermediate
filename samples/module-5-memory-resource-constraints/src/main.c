@@ -14,8 +14,8 @@
 LOG_MODULE_REGISTER(l5_task1, LOG_LEVEL_DBG);
 
 #define STACK_SIZE       1024
-#define SENSOR_COUNT       10 // Sensor count is 18 in l4-demo2, red
-#define SENSOR_PERIOD_MS  150
+// #define SENSOR_COUNT       10 // Sensor count is 18 in l4-demo2, red
+#define SENSOR_PERIOD_MS CONFIG_PUBLISHER_PERIOD_MS
 
 // Forward declaration
 static void l4_listener_cb(const struct zbus_channel *chan);
@@ -75,7 +75,7 @@ static void task_timeout_cb(int channel_id, void* task_ctx)
 {
 	struct task_timeout_context* ctx = (struct task_timeout_context*)task_ctx;
 #if 1
-	LOG_ERR("  task watchdog channel %d.for %s timed out", channel_id, ctx->api_name);
+	LOG_ERR("  task watchdog channel %d for %s timed out", channel_id, ctx->api_name);
 	LOG_ERR("  (Could reset here)");
 #else
 	sys_reboot(SYS_REBOOT_COLD);
@@ -103,7 +103,7 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 
 	k_thread_name_set(k_current_get(), "sensor");
 
-	for (int i = 0; i < SENSOR_COUNT; i++) {
+	for (int i = 0; i < CONFIG_SENSOR_READING_COUNT; i++) {
 		struct acc_msg data = {
 			.x = 10 * i,
 			.y = 10 * i,
@@ -123,7 +123,9 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 		k_msleep(SENSOR_PERIOD_MS);
 	}
 
-	LOG_INF("[SENSOR] done");
+	LOG_INF("******************");
+	LOG_INF("* [SENSOR] done  *");
+	LOG_INF("******************");
 }
 
 // For l5-task1, we are going to treat this logger thread as the consumer.
@@ -140,11 +142,11 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 	int received = 0;
 
 	// Register a channel per monitored thread
-	int task_wdt_id = task_wdt_add(100U,              // timeout ms
+	int task_wdt_id = task_wdt_add(CONFIG_SUBSCRIBER_WDT_TIMEOUT_MS,
 					task_timeout_cb,  // called if thread misses feed
 					(void *)&task_ctx);
 
-	while (received < SENSOR_COUNT) {
+	while (received < CONFIG_SENSOR_READING_COUNT) {
 		struct acc_msg msg;
 
 		/*
@@ -152,14 +154,6 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 		 * The slow logger will not reread the latest channel value.
 		 */
 
-#if 0
-		// TODO [ ] Create a symbol for hard-coded 1500 timeout:
-		int rc = zbus_sub_wait_msg(&l4_subscriber, &chan, &msg, K_MSEC(1500));
-		if (rc != 0) {
-			LOG_WRN("[LOGGER-MSG] timeout rc=%d", rc);
-			break;
-		}
-#else
 		rc = zbus_sub_wait(&l4_subscriber, &chan, K_MSEC(10000));
 		if (rc < 0) {
 			LOG_ERR("Failed or timed out waiting for zbus channel %d", (uint32_t)chan);
@@ -169,7 +163,6 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 		if (rc < 0) {
 			LOG_ERR("Failed M3 . . .");
 		}
-#endif
 
 		received++;
 
@@ -186,7 +179,7 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 
 		k_msleep(CONFIG_SUBSCRIBER_SIMULATED_WORK_DELAY_MS);
 
-		LOG_INF("Feeding task watchdog timer . . .");
+		// LOG_INF("Feeding task watchdog timer . . .");
 		task_wdt_feed(task_wdt_id);
 
 		// REFERENCE https://docs.zephyrproject.org/latest/services/zbus/index.html
@@ -216,9 +209,13 @@ int main(void)
 {
 	LOG_INF("=== Lecture 5 task 1: Memory Resource Constraints ===");
 
-	LOG_INF("sensor publishes every %dms", SENSOR_PERIOD_MS);
-	LOG_INF("display listener runs in publisher context");
-	LOG_INF("logger uses message subscriber copies");
+	LOG_INF("* Sensor publishes every %d ms", SENSOR_PERIOD_MS);
+	LOG_INF("* Logger thread runs a little over %d ms",
+		CONFIG_SUBSCRIBER_SIMULATED_WORK_DELAY_MS);
+	LOG_INF("* Display listener runs in publisher context");
+	LOG_INF("* Logger uses message subscriber copies");
+	LOG_INF("About to publish %d simulated sensor readings . . .",
+		CONFIG_SENSOR_READING_COUNT);
 
 	task_wdt_init(NULL);
 

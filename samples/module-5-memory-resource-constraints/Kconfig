@@ -9,6 +9,25 @@ config SUBSCRIBER_QUEUE_SIZE
 	  Set the size of a message subscriber queue.  Message is arbitrary data
 	  not limited to printable characters.
 
+config SENSOR_READING_COUNT
+	int "Number of simulated sensor readings to publish"
+	default 18
+	help
+	  Number of simulated sensor readings to publish on a zbus channel.
+
+config PUBLISHER_PERIOD_MS
+	int "Interval at which l5-task1 sensor data publisher emits new message"
+	default 150
+	help
+	  Interval at which l5-task1 sensor data publisher emits new message,
+	  with simulated sensor data.
+
+config SUBSCRIBER_WDT_TIMEOUT_MS
+	int "Task watchdog timeout in milliseconds, for message subscriber thread."
+	default 2000
+	help
+	  Task watchdog timeout in milliseconds, for message subscriber thread.
+
 config SUBSCRIBER_SIMULATED_WORK_DELAY_MS
 	int "Delay added at end of l5-task1 subscriber thread, in milliseconds"
 	default 100
