@@ -111,7 +111,7 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 			.x = 10 * i,
 			.y = 10 * i,
 			.z = 10 * i,
-			.seq = i,
+			.seq = i + 1,
 		};
 
 		LOG_INF("[SENSOR] publish seq=%u accel x=%d, y=%d, z=%d",
@@ -137,6 +137,8 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 static void logging_thread_fn(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
+	uint32_t seq_num_cur = 0;
+	uint32_t seq_num_prev = 0;
 	int32_t rc = 0;
 
 	k_thread_name_set(k_current_get(), "logging-thread-l5");
@@ -157,9 +159,10 @@ static void logging_thread_fn(void *p1, void *p2, void *p3)
 		 * The logging thread will not reread the latest channel value.
 		 */
 
-		rc = zbus_sub_wait(&l5_subscriber, &chan, K_MSEC(10000));
+		rc = zbus_sub_wait(&l5_subscriber, &chan, K_MSEC(3000));
 		if (rc < 0) {
-			LOG_ERR("[LOGGING] Failed or timed out waiting for zbus channel %d", (uint32_t)chan);
+			LOG_ERR("[LOGGING] Failed or timed out waiting for zbus channel 0x%08X",
+				(uint32_t)chan);
 		}
 
 		rc = zbus_chan_read(chan, &msg, K_NO_WAIT);
@@ -177,13 +180,29 @@ static void logging_thread_fn(void *p1, void *p2, void *p3)
 
 		/*
 		 * Slow logging thread.
-		 * Message copies let it process old samples safely.
 		 */
 
 		k_msleep(CONFIG_SUBSCRIBER_SIMULATED_WORK_DELAY_MS);
 
-		// LOG_INF("Feeding task watchdog timer . . .");
-		task_wdt_feed(task_wdt_id);
+		seq_num_cur = msg.seq;
+
+		if ((seq_num_cur - seq_num_prev) == 1) {
+			LOG_INF("[LOGGING] sequence numbers %d, %d look good, feeding task "
+				"watchdog . . .", seq_num_prev, seq_num_cur);
+			task_wdt_feed(task_wdt_id);
+		} else {
+			LOG_ERR("[LOGGING] Sequence numbers %d, %d not consecutive!",
+				seq_num_prev, seq_num_cur);
+			if ((seq_num_cur - seq_num_prev) > 1) {
+				LOG_WRN("[LOGGING] Detected work lost");
+			} else if ((seq_num_cur - seq_num_prev) == 0) {
+				LOG_WRN("[LOGGING] Queue looks empty");
+			} else {
+				LOG_ERR("[LOGGING] Sequence numbers swapped; at least one invalid");
+			}
+		}
+
+		seq_num_prev = seq_num_cur;
 	}
 
 	LOG_INF("[LOGGING] done, received=%d messages", received);
