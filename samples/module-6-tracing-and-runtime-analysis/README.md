@@ -1,6 +1,10 @@
-l6-task1
+# Scheduling Delay Investigation
 
-# Scheduling Delay Investgation
+This work goes with Iomico Zephyr Intermediate lecture series, lecture 6.
+The application primarily demonstrates and explores some common scheduling
+delay scenarios, and ways to log and to trace them.
+
+This work is tagged l6-task1 in the forked code repository.
 
 Some things to note in this task:
 
@@ -59,4 +63,54 @@ file adds this to the project's "Zephyr chosen" device tree node.
 west flash -r openocd
 ```
 
-## Running the Producer-Consumer Application
+# Running the Producer-Consumer Application
+
+## Selected Outputs
+
+With the following thread priorities and delay parameter settings:
+
+```
+LOG_MODULE_REGISTER(l6_task, LOG_LEVEL_INF);
+
+#define STACK_SIZE            2048
+#define CONTROL_PRIORITY         7
+#define MAINTENANCE_PRIORITY     4
+#define EVENT_PERIOD_MS        250
+#define MAINTENANCE_LOAD_US 300000
+```
+
+. . . a shell based inspection of thread states gives:
+
+_Exerpt 1: thread state from lecture 6 homework app_
+
+```
+uart:~$ kernel thread list
+
+Scheduler: 3 since last call
+Threads:
+ 0x200001c8 maintenance
+        options: 0x0, priority: 4 timeout: 0
+        state: pending, entry: 0x80005ed
+        stack size 2048, unused 1880, usage 168 / 2048 (8 %)
+
+ 0x20000280 control
+        options: 0x0, priority: 7 timeout: 0
+        state: pending, entry: 0x800060d
+        stack size 2048, unused 1848, usage 200 / 2048 (9 %)
+
+*0x20000840 shell_uart
+        options: 0x0, priority: 14 timeout: -9223372036854775808
+        state: queued, entry: 0x800391d
+        stack size 2048, unused 1040, usage 1008 / 2048 (49 %)
+
+ 0x20000348 logging
+        options: 0x0, priority: 14 timeout: 321
+        state: pending, entry: 0x8001841
+        stack size 768, unused 456, usage 312 / 768 (40 %)
+
+ 0x20000bc8 idle
+        options: 0x1, priority: 15 timeout: 0
+        state: , entry: 0x800aead
+        stack size 320, unused 256, usage 64 / 320 (20 %)
+```
+
