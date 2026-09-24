@@ -1,1 +1,9 @@
+# Iomico Zephyr Intermediate course - lecture 6 task
+
+config MISSED_COUNT_INTERVAL_MS
+	int "Interval on which to report missed message processing events"
+	default 10000
+	help
+	  Interval on which to report missed message processing events.
+
 source "Kconfig.zephyr"
