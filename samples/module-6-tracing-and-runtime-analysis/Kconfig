@@ -6,4 +6,29 @@ config MISSED_COUNT_INTERVAL_MS
 	help
 	  Interval on which to report missed message processing events.
 
+config L6_APP_ZEPHYR_TRACING
+	bool "Enable Zephyr tracing."
+	select TRACING
+	# select TRACING_CTF
+	# select TRACING_SYNC
+	# select TRACING_BACKEND_POSIX
+	help
+	  Enable Zephyr tracing.  To enable this symbol pulls in a handful of
+	  more specific trace related symbols.  It does not pull in the symbol
+	  TRACING_PACKET_MAX_SIZE, which is left to the application developer
+	  to assign with some reasonable trace packet size.
+
+config L6_APP_LOGGING
+	bool "Enable Zephyr logging in the lecture 6 schedule and trace app."
+	default y
+	help
+	  Enable Zephyr logging in the lecture 6 schedule and trace exploration
+	  application.  Note that for this particular app, it was developed on
+	  a small board with just one UART broken out.  This means that logging
+	  necessarily disables Zephyr tracing, for sane output, and to enable
+	  Zephyr trace facility disables logging.  Just for this app.
+	select LOG
+	depends on !L6_APP_ZEPHYR_TRACING
+	# select !TRACING
+
 source "Kconfig.zephyr"

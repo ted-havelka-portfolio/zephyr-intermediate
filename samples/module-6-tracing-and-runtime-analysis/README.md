@@ -57,6 +57,10 @@ the form:
 So, make sure that a file named app.overlay, or a specific DTS board overlay
 file adds this to the project's "Zephyr chosen" device tree node.
 
+Note that the native_sim board does not expect a UART device tree node.  The DTS
+overlay file which defines such a node for the Nucleo board causes a build error
+when present during a native_sim build.
+
 ## How To Flash
 
 ```
@@ -65,7 +69,23 @@ west flash -r openocd
 
 # Running the Producer-Consumer Application
 
-## Selected Outputs
+On a board that's separate from the host with the build and test environment,
+the app normally begins to run immediately after the board is flashed.  For
+native_sim, something of an emulated or virtualized hardware which runs on the
+dev host, the applicatio may be run with:
+
+```
+./build/zephyr/zephyr.exe -trace-file=/path/to/trace_file/channel0_0
+```
+
+The trace file may be viewed at a Linux command line, with babeltrace2
+installed.  The way to invoke this command is:
+
+```
+babeltrace2 /path/to/trace_file
+```
+
+## Selected Outputs from Real Hardware
 
 With the following thread priorities and delay parameter settings:
 

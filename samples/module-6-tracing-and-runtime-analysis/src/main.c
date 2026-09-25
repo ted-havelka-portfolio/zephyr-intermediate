@@ -29,12 +29,14 @@ static void event_timer_expiry(struct k_timer *timer)
 {
 	ARG_UNUSED(timer);
 
-	static uint32_t seq;
+	static uint32_t seq = 1;
 	struct control_event event = {
 		.seq = seq++,
 		.ready_ms = k_uptime_get_32(),
 	};
 
+	// Not sure whether it is safe to lock scheduler here, but trying:
+	k_sched_lock();
 	/* Timer expiry runs in interrupt context, so never wait here. */
 	int ret = k_msgq_put(&control_queue, &event, K_NO_WAIT);
 
@@ -42,11 +44,17 @@ static void event_timer_expiry(struct k_timer *timer)
 		LOG_ERR("Failed message add to queue, sequence no %d",
 			event.seq);
 		missed_count_fs++;
+		k_sched_unlock();
 		return;
 	}
 
 	/* Both threads become ready when the timer interrupt returns. */
 	k_sem_give(&maintenance_start);
+#if 1
+	sys_trace_named_event("msg_ready", event.seq,
+				k_msgq_num_used_get(&control_queue));
+#endif
+	k_sched_unlock();
 
 	/* TODO: Add an application trace event for this sequence. */
 }
