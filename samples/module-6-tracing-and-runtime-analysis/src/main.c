@@ -6,7 +6,6 @@ LOG_MODULE_REGISTER(l6_task, LOG_LEVEL_INF);
 
 #define STACK_SIZE            2048
 #define CONTROL_PRIORITY         7
-// #define CONTROL_PRIORITY         3
 #define MAINTENANCE_PRIORITY     4
 #define EVENT_PERIOD_MS        250
 // #define MAINTENANCE_LOAD_US  45000
@@ -51,8 +50,10 @@ static void event_timer_expiry(struct k_timer *timer)
 
 	/* Both threads become ready when the timer interrupt returns. */
 	k_sem_give(&maintenance_start);
+
 	sys_trace_named_event("msg_ready", event.seq,
 				k_msgq_num_used_get(&control_queue));
+
 	k_sched_unlock();
 
 	/* TODO: Add an application trace event for this sequence. */
@@ -102,39 +103,20 @@ static void control_fn(void *p1, void *p2, void *p3) // Begins with priority 7
 		LOG_INF("[CONTROL] processed message in %d milliseconds",
 		time_now - event.ready_ms);
 
-		/* TODO: Define a response-time guarantee. */
-		/* TODO: Measure latency and count every deadline miss. */
-		/* TODO: Rate-limit repeated warning messages. */
-		/* TODO: Add an application trace event for completion. */
+		/* TODO: [x] Define a response-time guarantee. */
+		/* TODO: [x] Measure latency and count every deadline miss. */
+		/* TODO: [x] Rate-limit repeated warning messages. */
+		/* TODO: [x] Add an application trace event for completion. */
 
-	// Response-time guarantee, assuming this means the trio of periods
-	// waiting, being scheduled, executing, for the mainenance thread looks
-	// like:
-	//
-	//	(1) EVENT_PERIOD_MS + context_switch + message_copy_time
-	//
-	// If we were to design and assume an application in which the context
-	// switch to our control task were sub-millisecond, we could estimate
-	// a guaranteed response time with some margin, say twenty percent
-	// greater than the significant response-time element of waiting for the
-	// event:
-	//
-	//	(2) EVENT_PERIOD_MS * 1.2
-	//
-	// However in this app the maintenance function is contrived to create
-	// an additinal millisecond delay, so the context switching term in
-	// response sime becomes important too.  A revised guaranteed
-	// response-time estimate now looks like:
-	//
-	//	(3) (EVENT_PERIOD_MS + MAINT_PERIOD_MS) * 1.2
-	//
-	// The scaling multiplier, greater than one, reflects the fact that
-	// there is some non-zero time both to schedule and to execute the
-	// control thread.  Also worth noting, the maintenance period is a time
-	// when an alternate task (in this case an initially higher priority
-	// thread) is running.  That is to say, from the perspective of the
-	// control thread, the maintenance period is part of the pending time
-	// of the maximum latency for the control thread to complete its work.
+		// Response-time guarantee is the sum of 
+		//
+		// (1) (EVENT_PERIOD_MS + MAINT_PERIOD_MS) + scheduling_time
+		//
+		// On a microcontroller running in the tens of megahertz,
+		// scheduling time will generally be sub-millisecond.  It will
+		// be greater than zero time, but is or should be at least an
+		// order of magnitude smaller than the the pending and ready
+		// periods.
 
 		if (missed_count_fs > 0) {
 			missed_report_helper("CONTROL");
