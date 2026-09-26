@@ -8,19 +8,19 @@ This work is tagged l6-task1 in the forked code repository.
 
 Some things to note in this task:
 
-| Run-time actor | Implemented by                                       |
-| :------------- | :--------------------------------------------------- |
-| producer       | A kernel timer and callback, to fill a message queue |
-| consumer       | A thread named "control"; reads a message queue      |
-| other CPU load | A thread named "maintenance"; calls k_busy_wait()    |
+| Run-time actor | Implemented by                                           |
+| :------------- | :------------------------------------------------------- |
+| producer       | A kernel timer and callback, to push messages to a queue |
+| consumer       | A thread named "control"; reads a message queue          |
+| other CPU load | A thread named "maintenance"; calls k_busy_wait()        |
 
-The maintenance thread simulate "heavy" CPU work. The call to k_busy_wait() uses
+The maintenance thread simulate heavy CPU work. The call to k_busy_wait() uses
 CPU time, and when this thread's priority is higher than that of the control
 thread, the control thread remains pending until that simulated work of the
 maintenance thread completes.
 
-Note, the timer runs in interrupt context, so it preempts whatever thread may be
-running.
+Note, the timer runs in an interrupt context, so it preempts whatever thread may
+be running.
 
 ## Configuration for Logging and Tracing
 
@@ -47,10 +47,9 @@ by changing the board name to the given board on hand.
 Note: boards may need a device tree overlay addition, to support CTF or other
 format trace information to use a UART as the backend transport.
 
-Part of Zephyr's tracing libraries depends on their being an element, or special
-device node property in the Zephyr "chosen" device tree node. That property is
-expressed in the line which contains "tracing-uart" in this device tree code
-snippet:
+Part of Zephyr's tracing libraries depends on a special device node property in
+the Zephyr "chosen" device tree node. That property is expressed in the line
+which contains "tracing-uart" in this device tree code snippet:
 
 ```
 / {
@@ -69,12 +68,12 @@ the form:
    24 |         DEVICE_DT_GET(DT_CHOSEN(zephyr_tracing_uart));
 ```
 
-So, make sure that a file named app.overlay, or a specific DTS board overlay
-file adds this to the project's "Zephyr chosen" device tree node.
+So, make sure that a file named \<board_name>.overlay adds this to the project's
+"Zephyr chosen" device tree node.
 
-Note that the native_sim board does not expect a UART device tree node. The DTS
-overlay file which defines such a node for the Nucleo board causes a build error
-when present during a native_sim build.
+Note that the native_sim board does not expect a UART device tree node. A DTS
+overlay named app.overlay will erroneously add a Zephyr "chosen" node
+property+value pair. An overlay file named differently will not.
 
 ## How To Flash
 
@@ -220,9 +219,8 @@ M1 - l6
 [00:00:16.001,000] <inf> l6_task: [CONTROL] processed seq=60, pub time 15250
 ```
 
-With the maintenance thread configured to run and finish faster than the 
-message producer interval, dropped message error and queue push failures go
-away:
+With the maintenance thread configured to run and finish faster than the message
+producer interval, dropped message error and queue push failures go away:
 
 ```
 [00:00:00.000,000] <inf> l6_task: === L6 Homework: Runtime Investigation ===

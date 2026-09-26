@@ -6,6 +6,7 @@ LOG_MODULE_REGISTER(l6_task, LOG_LEVEL_INF);
 
 #define STACK_SIZE            2048
 #define CONTROL_PRIORITY         7
+// #define CONTROL_PRIORITY         3
 #define MAINTENANCE_PRIORITY     4
 #define EVENT_PERIOD_MS        250
 // #define MAINTENANCE_LOAD_US  45000
@@ -50,10 +51,8 @@ static void event_timer_expiry(struct k_timer *timer)
 
 	/* Both threads become ready when the timer interrupt returns. */
 	k_sem_give(&maintenance_start);
-#if 1
 	sys_trace_named_event("msg_ready", event.seq,
 				k_msgq_num_used_get(&control_queue));
-#endif
 	k_sched_unlock();
 
 	/* TODO: Add an application trace event for this sequence. */
@@ -90,7 +89,12 @@ static void control_fn(void *p1, void *p2, void *p3) // Begins with priority 7
 			continue;
 		}
 
-		// LOG_INF("[CONTROL] processed seq=%u", event.seq);
+		sys_trace_named_event("msg_processed; seq, queue use", event.seq,
+				k_msgq_num_used_get(&control_queue));
+
+		uint32_t latency_ms = k_uptime_get_32() - event.ready_ms;
+		sys_trace_named_event("event_done", event.seq, latency_ms);
+
 		LOG_INF("[CONTROL] processed seq=%u, pub time %u", event.seq,
 		event.ready_ms);
 
@@ -135,6 +139,8 @@ static void control_fn(void *p1, void *p2, void *p3) // Begins with priority 7
 		if (missed_count_fs > 0) {
 			missed_report_helper("CONTROL");
 		}
+
+		k_msleep(5);
 	}
 }
 
@@ -165,8 +171,6 @@ int main(void)
 	LOG_INF("=== L6 Homework: Runtime Investigation ===");
 	LOG_INF("Control work must start within 10 ms");
 	LOG_INF("Inspect, measure, trace, explain, and correct the delay");
-
-	printk("M1 - l6\n");
 
 	k_timer_start(&event_timer, K_MSEC(500), K_MSEC(EVENT_PERIOD_MS));
 
