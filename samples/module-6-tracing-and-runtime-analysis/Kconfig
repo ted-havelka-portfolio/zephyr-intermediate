@@ -9,9 +9,6 @@ config MISSED_COUNT_INTERVAL_MS
 config L6_APP_ZEPHYR_TRACING
 	bool "Enable Zephyr tracing."
 	select TRACING
-	# select TRACING_CTF
-	# select TRACING_SYNC
-	# select TRACING_BACKEND_POSIX
 	help
 	  Enable Zephyr tracing.  To enable this symbol pulls in a handful of
 	  more specific trace related symbols.  It does not pull in the symbol
@@ -29,6 +26,5 @@ config L6_APP_LOGGING
 	  Zephyr trace facility disables logging.  Just for this app.
 	select LOG
 	depends on !L6_APP_ZEPHYR_TRACING
-	# select !TRACING
 
 source "Kconfig.zephyr"
