@@ -18,9 +18,15 @@ west build -b nucleo_l432kc -p always
 
 ## How To Flash
 
-A custom flash script is used in this first assignment, to overcome a limitation
-in the supporting flash runners available to use with ``west``.  For STMicro
-dev boards the script is called this way:
+With the toolchain that ships with Zephyr 4.4.0 it should be possible to flash
+this application with the runner ``openocd``, as follows:
+
+```shell
+west flash -r openocd
+```
+
+If this flash command fails for STMicro targeted boards, a custom shell helper
+script is part of this repo, and may be called as follows, for STMicro boards:
 
 ```shell
 ./flash-manually.sh w --config-path ./scripts
