@@ -12,7 +12,7 @@ LOG_MODULE_REGISTER(l4_task1, LOG_LEVEL_DBG);
 
 #define STACK_SIZE       1024
 #define SENSOR_COUNT       10 // Sensor count is 18 in l4-demo2
-#define SENSOR_PERIOD_MS  150
+#define SENSOR_PERIOD_MS  100
 
 // Forward declaration
 static void l4_listener_cb(const struct zbus_channel *chan);
